@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFT Portfolio & Ticketing Hub</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #1976d2;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .nav {
+            background-color: #fff;
+            padding: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nav a {
+            color: #1976d2;
+            text-decoration: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+        }
+        .nav a:hover {
+            color: #1565c0;
+        }
+        .main {
+            padding: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .event-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .event-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .nft-card {
+            text-align: center;
+        }
+        .nft-image {
+            max-width: 200px;
+            margin: 10px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>NFT Portfolio & Ticketing Hub</h1>
+        </div>
+        
+        <div class="nav">
+            <a href="#portfolio">Portfolio</a>
+            <a href="#events">Events</a>
+            <a href="#tickets">My Tickets</a>
+            <a href="#community">Community</a>
+            <a href="#wallet">Wallet</a>
+        </div>
+
+        <div class="main">
+            <div id="portfolio" class="card">
+                <h2>My NFT Portfolio</h2>
+                <div id="nft-list">
+                    <!-- NFTs will be loaded here -->
+                </div>
+            </div>
+
+            <div id="events" class="card">
+                <h2>Upcoming Events</h2>
+                <div class="event-list" id="event-list">
+                    <!-- Events will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data - in real app this would come from the backend
+        const mockNFTs = [
+            {
+                id: 1,
+                name: "Limited Edition NFT #1",
+                description: "Exclusive digital art piece",
+                imageUrl: "https://via.placeholder.com/200",
+                tokenIndex: "12345"
+            },
+            {
+                id: 2,
+                name: "Event Access Pass",
+                description: "VIP access to upcoming event",
+                imageUrl: "https://via.placeholder.com/200",
+                tokenIndex: "67890"
+            }
+        ];
+
+        const mockEvents = [
+            {
+                id: 1,
+                name: "Web3 Conference",
+                description: "Join the biggest Web3 event of the year",
+                date: "2025-04-15",
+                location: "Online",
+                ticketPrice: "100",
+                ticketToken: "HTR"
+            },
+            {
+                id: 2,
+                name: "NFT Art Exhibition",
+                description: "Virtual art exhibition featuring top NFT artists",
+                date: "2025-04-20",
+                location: "Virtual",
+                ticketPrice: "50",
+                ticketToken: "HTR"
+            }
+        ];
+
+        // Load NFTs
+        function loadNFTs() {
+            const nftList = document.getElementById('nft-list');
+            mockNFTs.forEach(nft => {
+                const nftCard = document.createElement('div');
+                nftCard.className = 'nft-card';
+                nftCard.innerHTML = `
+                    <img src="${nft.imageUrl}" alt="${nft.name}" class="nft-image">
+                    <h3>${nft.name}</h3>
+                    <p>${nft.description}</p>
+                    <p>Token ID: ${nft.tokenIndex}</p>
+                `;
+                nftList.appendChild(nftCard);
+            });
+        }
+
+        // Load Events
+        function loadEvents() {
+            const eventList = document.getElementById('event-list');
+            mockEvents.forEach(event => {
+                const eventCard = document.createElement('div');
+                eventCard.className = 'event-card';
+                eventCard.innerHTML = `
+                    <h3>${event.name}</h3>
+                    <p>${event.description}</p>
+                    <div>
+                        <p>Date: ${new Date(event.date).toLocaleDateString()}</p>
+                        <p>Location: ${event.location}</p>
+                        <p>Price: ${event.ticketPrice} ${event.ticketToken}</p>
+                        <button onclick="buyTicket(${event.id})">Buy Ticket</button>
+                    </div>
+                `;
+                eventList.appendChild(eventCard);
+            });
+        }
+
+        // Initialize
+        loadNFTs();
+        loadEvents();
+
+        // Function to simulate buying a ticket
+        function buyTicket(eventId) {
+            alert('Ticket purchase functionality will be implemented with Hathor Network integration');
+        }
+    </script>
+</body>
+</html>
