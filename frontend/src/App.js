@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Container, Typography, Box, Button, Grid, Paper, AppBar, Toolbar, IconButton, useMediaQuery, TextField } from '@mui/material';
+import { Container, Typography, Box, Button, Grid, Paper, AppBar, Toolbar, IconButton, useMediaQuery, TextField, CircularProgress, Alert, Snackbar, useTheme, useScrollTrigger } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { styled } from '@mui/material/styles';
 import { initTelegramApp, showAlert, getUserData } from './utils/telegram';
+import { connectWallet, getWalletBalance, getNFTs } from './utils/wallet';
+import { getEvents, getTickets, buyTicket } from './utils/events';
+import { AnimatePresence, motion } from 'framer-motion';
+import { useInView } from 'react-intersection-observer';
 
 // Create a modern, futuristic theme
 const theme = createTheme({
@@ -52,6 +56,11 @@ const theme = createTheme({
           textTransform: 'none',
           fontWeight: 600,
           padding: '10px 24px',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+          },
         },
         contained: {
           background: 'linear-gradient(45deg, #00f2ff 30%, #ff00f2 90%)',
@@ -69,6 +78,25 @@ const theme = createTheme({
           background: 'rgba(26, 26, 26, 0.8)',
           backdropFilter: 'blur(10px)',
           border: '1px solid rgba(255, 255, 255, 0.1)',
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 16px rgba(0, 0, 0, 0.2)',
+          },
+          '&:active': {
+            transform: 'translateY(0)',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+          },
+        },
+      },
+    },
+    MuiTypography: {
+      styleOverrides: {
+        root: {
+          transition: 'color 0.3s ease',
+          '&:hover': {
+            color: 'primary.main',
+          },
         },
       },
     },
@@ -76,17 +104,63 @@ const theme = createTheme({
 });
 
 // Styled components
-const GradientBox = styled(Box)(({ theme }) => ({
+const GradientBox = styled(motion.div)(({ theme }) => ({
   background: 'linear-gradient(45deg, rgba(0, 242, 255, 0.1) 30%, rgba(255, 0, 242, 0.1) 90%)',
   borderRadius: 24,
   padding: theme.spacing(3),
   marginBottom: theme.spacing(3),
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    transform: 'translateY(-4px)',
+    boxShadow: '0 12px 24px rgba(0, 0, 0, 0.3)',
+  },
 }));
 
 const StyledContainer = styled(Container)(({ theme }) => ({
   paddingTop: theme.spacing(4),
   paddingBottom: theme.spacing(4),
+  position: 'relative',
+  zIndex: 1,
 }));
+
+const ParticleContainer = styled(motion.div)({
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  pointerEvents: 'none',
+  zIndex: 0,
+  background: 'linear-gradient(135deg, rgba(0, 242, 255, 0.05) 0%, rgba(255, 0, 242, 0.05) 100%)',
+});
+
+const Particle = styled(motion.div)({
+  position: 'absolute',
+  borderRadius: '50%',
+  background: 'linear-gradient(45deg, rgba(0, 242, 255, 0.5), rgba(255, 0, 242, 0.5))',
+  pointerEvents: 'none',
+  boxShadow: '0 0 10px rgba(0, 242, 255, 0.3), 0 0 20px rgba(255, 0, 242, 0.3)',
+});
+
+const ScrollToTop = styled(motion.div)({
+  position: 'fixed',
+  bottom: '20px',
+  right: '20px',
+  zIndex: 1000,
+  background: 'rgba(10, 10, 10, 0.8)',
+  borderRadius: '50%',
+  width: '40px',
+  height: '40px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
+  '&:hover': {
+    background: 'rgba(10, 10, 10, 1)',
+    transform: 'scale(1.1)',
+  },
+});
 
 // Home component
 const Home = () => {
@@ -94,58 +168,78 @@ const Home = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const user = getUserData();
   const { showAlert } = initTelegramApp();
+  const [ref, inView] = useInView({
+    threshold: 0.1,
+    triggerOnce: true,
+  });
   
   return (
     <StyledContainer maxWidth="lg">
       <Box sx={{ my: 4 }}>
-        <Typography variant="h1" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-          NFT Portfolio & Ticketing Hub
-        </Typography>
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        >
+          <Typography variant="h1" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
+            NFT Ticketing Hub
+          </Typography>
+        </motion.div>
         
         {user && (
-          <Typography variant="h6" align="center" sx={{ mb: 4 }}>
-            Welcome, {user.first_name}!
-          </Typography>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <Typography variant="h6" align="center" sx={{ mb: 4 }}>
+              Welcome, {user.first_name}!
+            </Typography>
+          </motion.div>
         )}
         
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <GradientBox>
-              <Typography variant="h4" gutterBottom>
-                Portfolio Dashboard
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Track your NFTs and tokens across multiple chains including Hathor, Ethereum, BSC, and Polygon.
-              </Typography>
-              <Button 
-                variant="contained" 
-                size="large"
-                sx={{ mt: 2 }}
-                onClick={() => navigate('/portfolio')}
+          {[1, 2, 3].map((index) => (
+            <Grid item xs={12} md={4} key={index}>
+              <motion.div
+                ref={ref}
+                initial={{ opacity: 0, y: 20 }}
+                animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
               >
-                View Portfolio
-              </Button>
-            </GradientBox>
-          </Grid>
-          
-          <Grid item xs={12} md={6}>
-            <GradientBox>
-              <Typography variant="h4" gutterBottom>
-                Event Tickets
-              </Typography>
-              <Typography variant="body1" paragraph>
-                Browse, purchase, and manage your NFT-based event tickets with secure P2P trading.
-              </Typography>
-              <Button 
-                variant="contained" 
-                size="large"
-                sx={{ mt: 2 }}
-                onClick={() => navigate('/events')}
-              >
-                Explore Events
-              </Button>
-            </GradientBox>
-          </Grid>
+                <GradientBox
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Typography variant="h4" gutterBottom>
+                    {index === 1 ? 'Portfolio Dashboard' : 
+                     index === 2 ? 'Event Tickets' : 'My Tickets'}
+                  </Typography>
+                  <Typography variant="body1" paragraph>
+                    {index === 1 ? 'Track your NFTs and tokens across multiple chains' :
+                     index === 2 ? 'Browse and purchase tickets for exclusive events' :
+                     'Manage and view your event tickets'}
+                  </Typography>
+                  <Button 
+                    variant="contained" 
+                    size="large"
+                    sx={{ mt: 2 }}
+                    onClick={() => navigate(index === 1 ? '/portfolio' : 
+                                          index === 2 ? '/events' : '/tickets')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {index === 1 ? 'View Portfolio' :
+                     index === 2 ? 'Browse Events' : 'View Tickets'}
+                  </Button>
+                </GradientBox>
+              </motion.div>
+            </Grid>
+          ))}
         </Grid>
       </Box>
     </StyledContainer>
@@ -155,21 +249,52 @@ const Home = () => {
 // Portfolio component
 const Portfolio = () => {
   const navigate = useNavigate();
-  const { showAlert } = initTelegramApp();
   const [walletAddress, setWalletAddress] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
-  
-  const handleConnectWallet = () => {
-    if (walletAddress) {
-      setIsConnected(true);
-      showAlert('Wallet connected successfully!');
-    } else {
-      showAlert('Please enter a valid wallet address');
+  const [balance, setBalance] = useState(null);
+  const [nfts, setNfts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { showAlert } = initTelegramApp();
+  const [ref, inView] = useInView({
+    threshold: 0.1,
+    triggerOnce: true,
+  });
+
+  const handleConnectWallet = async () => {
+    try {
+      const address = await connectWallet();
+      if (address) {
+        setWalletAddress(address);
+        await loadWalletData(address);
+        showAlert('Wallet connected successfully!');
+      }
+    } catch (err) {
+      console.error('Wallet connection error:', err);
+      showAlert('Error connecting wallet. Please try again.');
     }
   };
-  
+
+  const loadWalletData = async (address) => {
+    try {
+      setLoading(true);
+      const [balanceData, nftsData] = await Promise.all([
+        getWalletBalance(address),
+        getNFTs(address)
+      ]);
+      
+      setBalance(balanceData);
+      setNfts(nftsData);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading wallet data:', err);
+      setError('Error loading wallet data. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth="lg">
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={() => navigate('/')}>
@@ -180,47 +305,134 @@ const Portfolio = () => {
           </Typography>
         </Toolbar>
       </AppBar>
+      
       <Box sx={{ my: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Your NFT Portfolio
-        </Typography>
-        
-        {!isConnected ? (
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="body1" gutterBottom>
-              Connect your wallet to view your NFTs
-            </Typography>
-            <TextField
-              fullWidth
-              label="Wallet Address"
-              variant="outlined"
-              value={walletAddress}
-              onChange={(e) => setWalletAddress(e.target.value)}
-              sx={{ mt: 2, mb: 2 }}
-            />
-            <Button 
-              variant="contained" 
-              color="primary" 
-              sx={{ mt: 2 }}
-              onClick={handleConnectWallet}
-            >
-              Connect Wallet
-            </Button>
-          </Paper>
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.8 }}
+        >
+          <Typography variant="h4" gutterBottom>
+            Portfolio Dashboard
+          </Typography>
+        </motion.div>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {!walletAddress ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <Box sx={{ textAlign: 'center' }}>
+              <Button 
+                variant="contained" 
+                size="large"
+                onClick={handleConnectWallet}
+                sx={{ mb: 2 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Connect Wallet
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                Connect your wallet to view your portfolio
+              </Typography>
+            </Box>
+          </motion.div>
         ) : (
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="body1">
-              Your NFTs will appear here once you connect your wallet.
-            </Typography>
-            <Button 
-              variant="contained" 
-              color="primary" 
-              sx={{ mt: 2 }}
-              onClick={() => showAlert('Wallet connection coming soon!')}
-            >
-              Refresh Portfolio
-            </Button>
-          </Paper>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Paper
+                  sx={{ p: 3 }}
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Typography variant="h6" gutterBottom>
+                    Wallet Balance
+                  </Typography>
+                  {loading ? (
+                    <CircularProgress />
+                  ) : (
+                    <Typography variant="h4" color="primary">
+                      {balance} HTR
+                    </Typography>
+                  )}
+                </Paper>
+              </motion.div>
+            </Grid>
+            
+            <Grid item xs={12} md={6}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <Paper
+                  sx={{ p: 3 }}
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Typography variant="h6" gutterBottom>
+                    NFT Collection
+                  </Typography>
+                  {loading ? (
+                    <CircularProgress />
+                  ) : (
+                    <Grid container spacing={2}>
+                      {nfts.map((nft, index) => (
+                        <Grid item xs={12} sm={6} md={4} key={index}>
+                          <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: (index + 1) * 0.1 }}
+                          >
+                            <Paper
+                              sx={{ p: 2, textAlign: 'center' }}
+                              whileHover={{
+                                scale: 1.02,
+                                boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+                              }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <motion.div
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <Typography variant="body1">
+                                  {nft.name}
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {nft.tokenId}
+                                </Typography>
+                              </motion.div>
+                            </Paper>
+                          </motion.div>
+                        </Grid>
+                      ))}
+                    </Grid>
+                  )}
+                </Paper>
+              </motion.div>
+            </Grid>
+          </Grid>
         )}
       </Box>
     </Container>
@@ -230,10 +442,48 @@ const Portfolio = () => {
 // Events component
 const Events = () => {
   const navigate = useNavigate();
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { showAlert } = initTelegramApp();
-  
+  const [ref, inView] = useInView({
+    threshold: 0.1,
+    triggerOnce: true,
+  });
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const eventsData = await getEvents();
+      setEvents(eventsData);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading events:', err);
+      setError('Error loading events. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBuyTicket = async (eventId) => {
+    try {
+      const success = await buyTicket(eventId);
+      if (success) {
+        showAlert('Ticket purchased successfully!');
+        loadEvents();
+      }
+    } catch (err) {
+      console.error('Error buying ticket:', err);
+      showAlert('Error purchasing ticket. Please try again.');
+    }
+  };
+
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth="lg">
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={() => navigate('/')}>
@@ -244,31 +494,76 @@ const Events = () => {
           </Typography>
         </Toolbar>
       </AppBar>
+      
       <Box sx={{ my: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Upcoming Events
-        </Typography>
-        <Grid container spacing={2}>
-          {[1, 2, 3].map((event) => (
-            <Grid item xs={12} key={event}>
-              <Paper sx={{ p: 2 }}>
-                <Typography variant="h6">Event {event}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Date: Coming Soon
-                </Typography>
-                <Button 
-                  variant="contained" 
-                  color="primary" 
-                  size="small" 
-                  sx={{ mt: 1 }}
-                  onClick={() => showAlert('Ticket purchase coming soon!')}
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.8 }}
+        >
+          <Typography variant="h4" gutterBottom>
+            Upcoming Events
+          </Typography>
+        </motion.div>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {loading ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {events.map((event, index) => (
+              <Grid item xs={12} md={6} lg={4} key={event.id}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
                 >
-                  Buy Tickets
-                </Button>
-              </Paper>
-            </Grid>
-          ))}
-        </Grid>
+                  <Paper
+                    sx={{ p: 3 }}
+                    whileHover={{
+                      scale: 1.02,
+                      boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Typography variant="h6" gutterBottom>
+                        {event.name}
+                      </Typography>
+                      <Typography variant="body1" color="text.secondary" paragraph>
+                        {event.description}
+                      </Typography>
+                      <Typography variant="h6" color="primary" gutterBottom>
+                        {event.price} HTR
+                      </Typography>
+                      <Button 
+                        variant="contained" 
+                        size="large" 
+                        sx={{ mt: 2 }}
+                        onClick={() => handleBuyTicket(event.id)}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        Buy Ticket
+                      </Button>
+                    </motion.div>
+                  </Paper>
+                </motion.div>
+              </Grid>
+            ))}
+          </Grid>
+        )}
       </Box>
     </Container>
   );
@@ -277,10 +572,35 @@ const Events = () => {
 // Tickets component
 const Tickets = () => {
   const navigate = useNavigate();
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { showAlert } = initTelegramApp();
-  
+  const [ref, inView] = useInView({
+    threshold: 0.1,
+    triggerOnce: true,
+  });
+
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
+  const loadTickets = async () => {
+    try {
+      setLoading(true);
+      const ticketsData = await getTickets();
+      setTickets(ticketsData);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading tickets:', err);
+      setError('Error loading tickets. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Container maxWidth="sm">
+    <Container maxWidth="lg">
       <AppBar position="static" color="transparent" elevation={0}>
         <Toolbar>
           <IconButton edge="start" color="inherit" onClick={() => navigate('/')}>
@@ -291,23 +611,98 @@ const Tickets = () => {
           </Typography>
         </Toolbar>
       </AppBar>
+      
       <Box sx={{ my: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Your Tickets
-        </Typography>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="body1">
-            You don't have any tickets yet. Browse events to purchase tickets.
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 20 }}
+          animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+          transition={{ duration: 0.8 }}
+        >
+          <Typography variant="h4" gutterBottom>
+            Your Tickets
           </Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            sx={{ mt: 2 }}
-            onClick={() => navigate('/events')}
-          >
-            Browse Events
-          </Button>
-        </Paper>
+        </motion.div>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {loading ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : (
+          <Grid container spacing={3}>
+            {tickets.length === 0 ? (
+              <Grid item xs={12}>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <Paper sx={{ p: 3, textAlign: 'center' }}>
+                    <Typography variant="h6" gutterBottom>
+                      No Tickets Yet
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" paragraph>
+                      Browse events to purchase tickets.
+                    </Typography>
+                    <Button 
+                      variant="contained" 
+                      color="primary" 
+                      sx={{ mt: 2 }}
+                      onClick={() => navigate('/events')}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Browse Events
+                    </Button>
+                  </Paper>
+                </motion.div>
+              </Grid>
+            ) : (
+              tickets.map((ticket, index) => (
+                <Grid item xs={12} key={ticket.id}>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <Paper
+                      sx={{ p: 3 }}
+                      whileHover={{
+                        scale: 1.02,
+                        boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <motion.div
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Typography variant="h6" gutterBottom>
+                          {ticket.eventName}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" paragraph>
+                          {ticket.eventDescription}
+                        </Typography>
+                        <Typography variant="h6" color="primary" gutterBottom>
+                          {ticket.price} HTR
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Ticket ID: {ticket.ticketId}
+                        </Typography>
+                      </motion.div>
+                    </Paper>
+                  </motion.div>
+                </Grid>
+              ))
+            )}
+          </Grid>
+        )}
       </Box>
     </Container>
   );
@@ -316,6 +711,12 @@ const Tickets = () => {
 function App() {
   const [telegramApp, setTelegramApp] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const location = useLocation();
+  const theme = useTheme();
+  const trigger = useScrollTrigger({
+    threshold: 100,
+    disableHysteresis: true,
+  });
 
   useEffect(() => {
     const initApp = async () => {
@@ -339,6 +740,39 @@ function App() {
     };
     
     initApp();
+  }, []);
+
+  // Add particle effects
+  useEffect(() => {
+    const particles = [];
+    const container = document.createElement('div');
+    container.className = 'particles';
+    document.body.appendChild(container);
+
+    for (let i = 0; i < 30; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      
+      // Randomize position
+      particle.style.left = Math.random() * 100 + 'vw';
+      particle.style.top = Math.random() * 100 + 'vh';
+      
+      // Randomize size
+      const size = Math.random() * 2 + 1;
+      particle.style.width = size + 'px';
+      particle.style.height = size + 'px';
+      
+      // Randomize animation duration
+      const duration = Math.random() * 5 + 5;
+      particle.style.animationDuration = duration + 's';
+      
+      container.appendChild(particle);
+      particles.push(particle);
+    }
+
+    return () => {
+      container.remove();
+    };
   }, []);
 
   // Add debug information to the UI when not in Telegram
@@ -370,15 +804,60 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
-        {renderDebugInfo()}
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/portfolio" element={<Portfolio />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/tickets" element={<Tickets />} />
-        </Routes>
-      </BrowserRouter>
+      <ParticleContainer
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+      >
+        {Array.from({ length: 50 }).map((_, i) => (
+          <Particle
+            key={i}
+            initial={{
+              x: Math.random() * 100 + '%',
+              y: Math.random() * 100 + '%',
+              scale: 0
+            }}
+            animate={{
+              x: Math.random() * 100 + '%',
+              y: Math.random() * 100 + '%',
+              scale: 1,
+              opacity: [0, 1, 0]
+            }}
+            transition={{
+              duration: Math.random() * 5 + 5,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        ))}
+      </ParticleContainer>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location.pathname}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.5 }}
+        >
+          <BrowserRouter>
+            {renderDebugInfo()}
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/events" element={<Events />} />
+              <Route path="/tickets" element={<Tickets />} />
+            </Routes>
+          </BrowserRouter>
+        </motion.div>
+      </AnimatePresence>
+      <ScrollToTop
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: trigger ? 1 : 0, scale: trigger ? 1 : 0.5 }}
+        transition={{ duration: 0.3 }}
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      >
+        <ArrowBackIcon sx={{ transform: 'rotate(180deg)' }} />
+      </ScrollToTop>
     </ThemeProvider>
   );
 }
