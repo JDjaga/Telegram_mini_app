@@ -2,41 +2,69 @@
 const tg = window.Telegram?.WebApp;
 
 export const initTelegramApp = () => {
+  console.log('Checking for Telegram WebApp...');
+  console.log('window.Telegram:', window.Telegram);
+  console.log('tg object:', tg);
+
   if (tg) {
-    // Initialize the WebApp
-    tg.ready();
-    
-    // Set the header color
-    tg.setHeaderColor('#00f2ff');
-    
-    // Set the background color
-    tg.setBackgroundColor('#0a0a0a');
-    
-    // Expand the WebApp to full height
-    tg.expand();
+    try {
+      console.log('Initializing Telegram WebApp...');
+      
+      // Initialize the WebApp
+      tg.ready();
+      console.log('WebApp ready called');
+      
+      // Set the header color
+      tg.setHeaderColor('#00f2ff');
+      console.log('Header color set');
+      
+      // Set the background color
+      tg.setBackgroundColor('#0a0a0a');
+      console.log('Background color set');
+      
+      // Expand the WebApp to full height
+      tg.expand();
+      console.log('WebApp expanded');
 
-    // Enable closing confirmation
-    tg.enableClosingConfirmation();
+      // Enable closing confirmation
+      tg.enableClosingConfirmation();
+      console.log('Closing confirmation enabled');
 
-    // Get user data
-    const user = tg.initDataUnsafe?.user;
-    
-    return {
-      isInitialized: true,
-      user,
-      platform: tg.platform,
-      version: tg.version,
-      colorScheme: tg.colorScheme,
-      showAlert: (message) => tg.showAlert(message),
-      showConfirm: (message) => tg.showConfirm(message),
-      showPopup: (params) => tg.showPopup(params),
-      close: () => tg.close(),
-      expand: () => tg.expand(),
-      MainButton: tg.MainButton,
-      BackButton: tg.BackButton,
-    };
+      // Get user data
+      const user = tg.initDataUnsafe?.user;
+      console.log('User data:', user);
+      
+      return {
+        isInitialized: true,
+        user,
+        platform: tg.platform,
+        version: tg.version,
+        colorScheme: tg.colorScheme,
+        showAlert: (message) => tg.showAlert(message),
+        showConfirm: (message) => tg.showConfirm(message),
+        showPopup: (params) => tg.showPopup(params),
+        close: () => tg.close(),
+        expand: () => tg.expand(),
+        MainButton: tg.MainButton,
+        BackButton: tg.BackButton,
+      };
+    } catch (error) {
+      console.error('Error during Telegram WebApp initialization:', error);
+      return {
+        isInitialized: false,
+        error: error.message,
+        showAlert: (message) => alert(message),
+        showConfirm: (message) => window.confirm(message),
+        showPopup: (params) => alert(params.message),
+        close: () => window.close(),
+        expand: () => {},
+        MainButton: null,
+        BackButton: null,
+      };
+    }
   }
   
+  console.log('Telegram WebApp not available');
   // Fallback functions for when Telegram WebApp is not available
   return {
     isInitialized: false,

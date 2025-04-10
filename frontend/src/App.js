@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Container, Typography, Box, Button, Grid, Paper, AppBar, Toolbar, IconButton, useMediaQuery } from '@mui/material';
+import { Container, Typography, Box, Button, Grid, Paper, AppBar, Toolbar, IconButton, useMediaQuery, TextField } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { styled } from '@mui/material/styles';
 import { initTelegramApp, showAlert, getUserData } from './utils/telegram';
@@ -93,6 +93,7 @@ const Home = () => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const user = getUserData();
+  const { showAlert } = initTelegramApp();
   
   return (
     <StyledContainer maxWidth="lg">
@@ -155,6 +156,17 @@ const Home = () => {
 const Portfolio = () => {
   const navigate = useNavigate();
   const { showAlert } = initTelegramApp();
+  const [walletAddress, setWalletAddress] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  
+  const handleConnectWallet = () => {
+    if (walletAddress) {
+      setIsConnected(true);
+      showAlert('Wallet connected successfully!');
+    } else {
+      showAlert('Please enter a valid wallet address');
+    }
+  };
   
   return (
     <Container maxWidth="sm">
@@ -172,19 +184,44 @@ const Portfolio = () => {
         <Typography variant="h5" gutterBottom>
           Your NFT Portfolio
         </Typography>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="body1">
-            Your NFTs will appear here once you connect your wallet.
-          </Typography>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            sx={{ mt: 2 }}
-            onClick={() => showAlert('Wallet connection coming soon!')}
-          >
-            Connect Wallet
-          </Button>
-        </Paper>
+        
+        {!isConnected ? (
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="body1" gutterBottom>
+              Connect your wallet to view your NFTs
+            </Typography>
+            <TextField
+              fullWidth
+              label="Wallet Address"
+              variant="outlined"
+              value={walletAddress}
+              onChange={(e) => setWalletAddress(e.target.value)}
+              sx={{ mt: 2, mb: 2 }}
+            />
+            <Button 
+              variant="contained" 
+              color="primary" 
+              sx={{ mt: 2 }}
+              onClick={handleConnectWallet}
+            >
+              Connect Wallet
+            </Button>
+          </Paper>
+        ) : (
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="body1">
+              Your NFTs will appear here once you connect your wallet.
+            </Typography>
+            <Button 
+              variant="contained" 
+              color="primary" 
+              sx={{ mt: 2 }}
+              onClick={() => showAlert('Wallet connection coming soon!')}
+            >
+              Refresh Portfolio
+            </Button>
+          </Paper>
+        )}
       </Box>
     </Container>
   );
@@ -237,30 +274,109 @@ const Events = () => {
   );
 };
 
+// Tickets component
+const Tickets = () => {
+  const navigate = useNavigate();
+  const { showAlert } = initTelegramApp();
+  
+  return (
+    <Container maxWidth="sm">
+      <AppBar position="static" color="transparent" elevation={0}>
+        <Toolbar>
+          <IconButton edge="start" color="inherit" onClick={() => navigate('/')}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>
+            My Tickets
+          </Typography>
+        </Toolbar>
+      </AppBar>
+      <Box sx={{ my: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Your Tickets
+        </Typography>
+        <Paper sx={{ p: 3 }}>
+          <Typography variant="body1">
+            You don't have any tickets yet. Browse events to purchase tickets.
+          </Typography>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            sx={{ mt: 2 }}
+            onClick={() => navigate('/events')}
+          >
+            Browse Events
+          </Button>
+        </Paper>
+      </Box>
+    </Container>
+  );
+};
+
 function App() {
   const [telegramApp, setTelegramApp] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     const initApp = async () => {
-      const app = initTelegramApp();
-      setTelegramApp(app);
-      
-      if (!app.isInitialized) {
-        showAlert('Please open this app through the Telegram bot @HathorEventBot');
+      try {
+        console.log('Initializing Telegram WebApp...');
+        const app = initTelegramApp();
+        console.log('Telegram WebApp initialization result:', app);
+        setTelegramApp(app);
+        
+        if (!app.isInitialized) {
+          console.error('Telegram WebApp initialization failed');
+          showAlert('Please open this app through the Telegram bot @HathorEventBot');
+        } else {
+          console.log('Telegram WebApp initialized successfully');
+          setIsInitialized(true);
+        }
+      } catch (error) {
+        console.error('Error initializing Telegram WebApp:', error);
+        showAlert('Error initializing app. Please try again.');
       }
     };
     
     initApp();
   }, []);
 
+  // Add debug information to the UI when not in Telegram
+  const renderDebugInfo = () => {
+    if (!isInitialized) {
+      return (
+        <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
+          <Typography variant="h6" color="error">
+            Debug Information
+          </Typography>
+          <Typography variant="body2">
+            Telegram WebApp Status: {telegramApp?.isInitialized ? 'Initialized' : 'Not Initialized'}
+          </Typography>
+          <Typography variant="body2">
+            Error: {telegramApp?.error || 'None'}
+          </Typography>
+          <Typography variant="body2">
+            Platform: {telegramApp?.platform || 'Unknown'}
+          </Typography>
+          <Typography variant="body2">
+            Version: {telegramApp?.version || 'Unknown'}
+          </Typography>
+        </Box>
+      );
+    }
+    return null;
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <BrowserRouter>
+        {renderDebugInfo()}
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/portfolio" element={<Portfolio />} />
           <Route path="/events" element={<Events />} />
+          <Route path="/tickets" element={<Tickets />} />
         </Routes>
       </BrowserRouter>
     </ThemeProvider>
